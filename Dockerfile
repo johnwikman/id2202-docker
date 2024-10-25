@@ -49,6 +49,8 @@ RUN DEBIAN_FRONTEND=noninteractive echo "Installing dependencies" \
         export ARCHITECTURE=x86_64; \
     elif [ "$TARGETPLATFORM" = "linux/x86_64" ]; then \
         export ARCHITECTURE=x86_64; \
+    elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+        export ARCHITECTURE=aarch64; \
     elif [ "$TARGETPLATFORM" = "linux/aarch64" ]; then \
         export ARCHITECTURE=aarch64; \
     else \
