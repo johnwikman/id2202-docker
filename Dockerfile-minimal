@@ -7,7 +7,9 @@ WORKDIR /root
 # Install dependencies to compile and run x86 with nasm and gcc-10
 RUN DEBIAN_FRONTEND=noninteractive echo "Installing dependencies" \
  && apt-get update \
- && apt-get install -y nasm gcc-10 \
+ && apt-get install -y nasm gcc-10 g++-10 make \
+ && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 1 \
+ && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 1 \
  && apt-get clean autoclean \
  && apt-get autoremove --yes \
  && rm -rf /var/lib/apt/lists/*
