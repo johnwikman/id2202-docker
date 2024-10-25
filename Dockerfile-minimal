@@ -1,0 +1,13 @@
+FROM docker.io/library/ubuntu:24.04
+
+SHELL ["/bin/bash", "-c"]
+
+WORKDIR /root
+
+# Install dependencies to compile and run x86 with nasm and gcc-10
+RUN DEBIAN_FRONTEND=noninteractive echo "Installing dependencies" \
+ && apt-get update \
+ && apt-get install -y nasm gcc-10 \
+ && apt-get clean autoclean \
+ && apt-get autoremove --yes \
+ && rm -rf /var/lib/apt/lists/*
