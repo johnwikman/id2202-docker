@@ -1,4 +1,4 @@
-FROM docker.io/library/ubuntu:24.04
+FROM docker.io/library/ubuntu:22.04
 
 SHELL ["/bin/bash", "-c"]
 
@@ -6,7 +6,8 @@ WORKDIR /root
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
-    PATH=/usr/local/cargo/bin:/root/.local/bin:$PATH
+    PATH=/usr/local/cargo/bin:/usr/lib/llvm-13/bin:/root/.local/bin:$PATH
+
 
 ARG TARGETPLATFORM
 RUN DEBIAN_FRONTEND=noninteractive echo "Installing dependencies" \
@@ -87,6 +88,7 @@ RUN DEBIAN_FRONTEND=noninteractive echo "Installing dependencies" \
  && cs launch scala-cli -- --power package Temp.scala -o temp \
  && rm /root/temp /root/Temp.scala \
  # Setup stack (Haskell)
+ && apt-get install -y libnuma-dev llvm-13-dev \
  && stack setup --resolver lts-18.14 \
  && stack install --resolver lts-18.14 unordered-containers pretty-show prettyprinter optparse-applicative uniplate protolude recursion-schemes alex happy \
  # Setup Opam
@@ -108,6 +110,6 @@ ENV OPAM_SWITCH_PREFIX='/root/.opam/default' \
     CAML_LD_LIBRARY_PATH='/root/.opam/default/lib/stublibs:/root/.opam/default/lib/ocaml/stublibs:/root/.opam/default/lib/ocaml' \
     OCAML_TOPLEVEL_PATH='/root/.opam/default/lib/toplevel' \
     MANPATH=':/root/.opam/system/man:/root/.opam/default/man' \
-    PATH='/root/.opam/default/bin:/root/.opam/system/bin:/usr/local/cargo/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH'
+    PATH='/root/.opam/default/bin:/root/.opam/system/bin:/usr/local/cargo/bin:/usr/lib/llvm-13/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH'
 
 WORKDIR /id2202
