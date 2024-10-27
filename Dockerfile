@@ -95,7 +95,7 @@ RUN DEBIAN_FRONTEND=noninteractive echo "Installing dependencies" \
  && opam init -y --disable-sandboxing \
  && opam install -y ocamlbuild menhir ocamlfind core \
  # Setup Rust Cargo
- && cargo install cargo-prefetch \
+ && cargo install -j1 cargo-prefetch \
  && cargo prefetch \
  # Cleanup
  && cd /root \
