@@ -60,8 +60,8 @@ push-manifest:
 	podman manifest rm $(IMAGENAME):latest     || true
 	podman manifest rm $(IMAGENAME):minimal    || true
 
-	podman manifest create $(IMAGENAME):$(VERSION) --amend "$(TAG_X86)" #--amend "$(TAG_ARM)"
-	podman manifest create $(IMAGENAME):latest     --amend "$(TAG_X86)" #--amend "$(TAG_ARM)"
+	podman manifest create $(IMAGENAME):$(VERSION) --amend "$(TAG_X86)" --amend "$(TAG_ARM)"
+	podman manifest create $(IMAGENAME):latest     --amend "$(TAG_X86)" --amend "$(TAG_ARM)"
 	podman manifest create $(IMAGENAME):minimal    --amend "$(TAG_MINIMAL)"
 
 	podman manifest push --rm $(IMAGENAME):$(VERSION) docker://$(IMAGENAME):$(VERSION)
