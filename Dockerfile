@@ -65,7 +65,7 @@ RUN DEBIAN_FRONTEND=noninteractive echo "Installing dependencies" \
  && echo '@main def main = println(s"Scala library version ${dotty.tools.dotc.config.Properties.versionNumberString}")' > /buildsrc/scala/test.scala \
  && cs launch scala -- -nocompdaemon test.scala \
  # Scala-Bison
- && curl -fL https://gist.githubusercontent.com/phaller/5a104d227818eed3ae2ab1d4d2191675/raw/d911f070a6860803c91b28e2b58a23b2ca024854/scala-bison-cs-3.3 -o /buildsrc/scala/scala-bison.sh \
+ && curl -fL https://gist.githubusercontent.com/phaller/8e7b57c23f80b0ef8b1e68d4eb579dc7/raw/3d5019801e56fb91337b00878df2cae1c7730fa2/scala-bison -o /buildsrc/scala/scala-bison.sh \
  && chmod +x /buildsrc/scala/scala-bison.sh \
  && mv /buildsrc/scala/scala-bison.sh /usr/local/bin/scala-bison \
  && curl -fL https://github.com/phaller/scala-bison/releases/download/v1.2/scala-bison-3.3.jar -o /buildsrc/scala/scala-bison-3.3.jar \

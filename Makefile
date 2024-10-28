@@ -1,6 +1,6 @@
 .PHONY: build-minimal
 
-VERSION = 0.2.0
+VERSION = 0.2.1
 
 IMAGENAME = johnwikman/id2202
 
@@ -33,16 +33,6 @@ build-arm:
 	    --build-arg="TARGETPLATFORM=linux/arm64" \
 	    --file "Dockerfile" \
 	    .
-
-test-minimal:
-	podman run --rm -it \
-	    --platform "linux/amd64" \
-	    -v "$(shell pwd -P):/mnt:ro" \
-	    -w /root \
-	    $(TAG_MINIMAL) \
-	    bash -c "nasm -felf64 -o /root/hello.o /mnt/hello.asm \
-	          && gcc-10 -z noexecstack -no-pie -o /root/a.out /root/hello.o \
-	          && /root/a.out"
 
 push-minimal:
 	podman push $(TAG_MINIMAL) docker://docker.io/$(TAG_MINIMAL)
