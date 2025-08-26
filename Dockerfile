@@ -1,52 +1,55 @@
-FROM docker.io/library/ubuntu:20.04
+#▐▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▌
+#▐  __  __ _       _                 _  ▌
+#▐ |  \/  (_)_ __ (_)_ __ ___   __ _| | ▌
+#▐ | |\/| | | '_ \| | '_ ` _ \ / _` | | ▌
+#▐ | |  | | | | | | | | | | | | (_| | | ▌
+#▐ |_|  |_|_|_| |_|_|_| |_| |_|\__,_|_| ▌
+#▐                                      ▌
+#▐▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▌
+FROM docker.io/library/debian:13.1 AS minimal
 
-SHELL ["/bin/bash", "-c"]
+SHELL ["/bin/bash", "-x", "-c"]
 
 WORKDIR /root
 
+# Install dependencies to compile and run x86 with nasm and gcc
+RUN DEBIAN_FRONTEND=noninteractive echo "Installing minimal dependencies" \
+ && apt-get update \
+ && apt-get install -y \
+        nasm gcc g++ bison make \
+        curl build-essential pkg-config unzip \
+ && apt-get clean autoclean \
+ && apt-get autoremove --yes \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /id2202
+
+
+#▐▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▌
+#▐   ____                      _      _        ▌
+#▐  / ___|___  _ __ ___  _ __ | | ___| |_ ___  ▌
+#▐ | |   / _ \| '_ ` _ \| '_ \| |/ _ \ __/ _ \ ▌
+#▐ | |__| (_) | | | | | | |_) | |  __/ ||  __/ ▌
+#▐  \____\___/|_| |_| |_| .__/|_|\___|\__\___| ▌
+#▐                      |_|                    ▌
+#▐▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▌
+FROM minimal AS complete
+
+WORKDIR /root
+
+# Setup environment variable that are necessary at install
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
+    OPAMROOTISOK=1 \
     PATH=/usr/local/cargo/bin:/root/.local/bin:$PATH
 
-
 ARG TARGETPLATFORM
-RUN DEBIAN_FRONTEND=noninteractive echo "Installing dependencies" \
- && apt-get update \
- && ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime \
- && apt-get install -y curl software-properties-common build-essential \
-                       libssl-dev pkg-config zsh nasm \
- && apt-add-repository -y ppa:fish-shell/release-3 \
- && apt-get install -y --no-install-recommends fish \
- # C/C++
- && add-apt-repository -y ppa:ubuntu-toolchain-r/test \
- && apt-get install -y gcc-10 g++-10 flex wget \
- && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 1 \
- && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 1 \
- # Install recent version of bison (3.8.2)
- && mkdir -p /buildsrc/bison \
- && cd /buildsrc/bison \
- && wget https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.gz \
- && tar -xzvf bison-3.8.2.tar.gz \
- && cd /buildsrc/bison/bison-3.8.2 \
- && ./configure \
- && make \
- && make install \
- && ln -s /usr/local/bin/bison /usr/bin/bison \
- && cd /root \
- # OCaml (Install Opam here, configure later in Dockerfile)
- && add-apt-repository -y ppa:avsm/ppa \
- && apt-get install -y apt-utils m4 opam \
- # Haskell (Install Stack only, config later)
- && mkdir -p /buildsrc/haskell \
- && cd /buildsrc/haskell \
- && curl -sSL https://get.haskellstack.org/ -o /buildsrc/haskell/stackinstall.sh \
- && sh /buildsrc/haskell/stackinstall.sh \
- # Java
- && add-apt-repository -y ppa:openjdk-r/ppa \
- && apt-get install -y ca-certificates-java openjdk-17-jdk \
- # Scala
- && mkdir -p /buildsrc/scala \
- && cd /buildsrc/scala \
+ARG INSTALL_OCAML
+ARG INSTALL_HASKELL
+ARG INSTALL_JAVA
+ARG INSTALL_SCALA
+ARG INSTALL_RUST
+RUN export DEBIAN_FRONTEND=noninteractive \
  && if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
         export ARCHITECTURE=x86_64; \
     elif [ "$TARGETPLATFORM" = "linux/x86_64" ]; then \
@@ -58,46 +61,96 @@ RUN DEBIAN_FRONTEND=noninteractive echo "Installing dependencies" \
     else \
         export ARCHITECTURE=noarch; \
     fi \
- && curl -fL https://github.com/coursier/launchers/raw/master/cs-${ARCHITECTURE}-pc-linux.gz | gzip -d > /buildsrc/scala/cs \
- && chmod +x /buildsrc/scala/cs \
- && mv cs /usr/local/bin/cs \
- && cs setup --yes --apps scala,scalac,scala-cli \
- && echo '@main def main = println(s"Scala library version ${dotty.tools.dotc.config.Properties.versionNumberString}")' > /buildsrc/scala/test.scala \
- && cs launch scala -- -nocompdaemon test.scala \
- # Scala-Bison
- && curl -fL https://gist.githubusercontent.com/phaller/8e7b57c23f80b0ef8b1e68d4eb579dc7/raw/3d5019801e56fb91337b00878df2cae1c7730fa2/scala-bison -o /buildsrc/scala/scala-bison.sh \
- && chmod +x /buildsrc/scala/scala-bison.sh \
- && mv /buildsrc/scala/scala-bison.sh /usr/local/bin/scala-bison \
- && curl -fL https://github.com/phaller/scala-bison/releases/download/v1.2/scala-bison-3.3.jar -o /buildsrc/scala/scala-bison-3.3.jar \
- && mkdir -p /usr/local/share/scala-bison/lib \
- && mv scala-bison-3.3.jar /usr/local/share/scala-bison/lib/scala-bison-3.3.jar \
+ && echo "Updating apt lists" \
+ && apt-get update \
+ && apt-get install -y ca-certificates ca-certificates-java \
+ # OCaml
+ && if [ "$INSTALL_OCAML" = "y" ]; then \
+        echo -e "\e[1;32m<<<<==== Installing OCaml + Opam ====>>>>\e[0m" \
+     && bash -c "curl -fsSL https://opam.ocaml.org/install.sh | bash" \
+     && opam init -y --disable-sandboxing --compiler=5.3.0 \
+     && opam install -y ocamlbuild menhir ocamlfind core \
+  ; else \
+        echo -e "\e[1;33m<<<<==== Skipping OCaml + Opam ====>>>>\e[0m" \
+  ; fi \
+ # Haskell
+ && if [ "$INSTALL_HASKELL" = "y" ]; then \
+        echo -e "\e[1;32m<<<<==== Installing Haskell ====>>>>\e[0m" \
+     && mkdir -p /buildsrc/haskell \
+     && cd /buildsrc/haskell \
+     && curl -sSL https://get.haskellstack.org/ -o /buildsrc/haskell/stackinstall.sh \
+     && sh /buildsrc/haskell/stackinstall.sh \
+     # Setup stack packages
+     && apt-get install -y libnuma-dev llvm-dev \
+     && stack setup --resolver lts-24.6 \
+     && stack install --resolver lts-24.6 \
+            alex-3.5.4.0 \
+            happy-2.1.7 \
+            optparse-applicative-0.18.1.0 \
+            pretty-show-1.10 \
+            prettyprinter-1.7.1 \
+            protolude-0.3.5 \
+            recursion-schemes-5.2.3 \
+            uniplate-1.6.13 \
+            unordered-containers-0.2.20 \
+  ; else \
+        echo -e "\e[1;33m<<<<==== Skipping Haskell ====>>>>\e[0m" \
+  ; fi \
+ # Java
+ && if [ "$INSTALL_JAVA" = "y" ]; then \
+        echo -e "\e[1;32m<<<<==== Installing Java ====>>>>\e[0m" \
+     && apt-get install -y openjdk-21-jdk maven \
+  ; else \
+        echo -e "\e[1;33m<<<<==== Skipping Java ====>>>>\e[0m" \
+  ; fi \
+ # Scala
+ && if [ "$INSTALL_SCALA" = "y" ]; then \
+        echo -e "\e[1;32m<<<<==== Installing Scala ====>>>>\e[0m" \
+     && mkdir -p /buildsrc/scala \
+     && cd /buildsrc/scala \
+     && apt-get install -y openjdk-21-jdk \
+     && curl -fL https://github.com/coursier/launchers/raw/master/cs-${ARCHITECTURE}-pc-linux.gz | gzip -d > /buildsrc/scala/cs \
+     && chmod +x /buildsrc/scala/cs \
+     && mv cs /usr/local/bin/cs \
+     && cs setup --yes --apps scala,scalac,scala-cli \
+     && echo '@main def main = println(s"Scala library version ${dotty.tools.dotc.config.Properties.versionNumberString}")' > /buildsrc/scala/test.scala \
+     && cs launch scala -- -nocompdaemon test.scala \
+     # Scala-Bison
+     && curl -fL https://gist.githubusercontent.com/phaller/8e7b57c23f80b0ef8b1e68d4eb579dc7/raw/3d5019801e56fb91337b00878df2cae1c7730fa2/scala-bison -o /buildsrc/scala/scala-bison.sh \
+     && chmod +x /buildsrc/scala/scala-bison.sh \
+     && mv /buildsrc/scala/scala-bison.sh /usr/local/bin/scala-bison \
+     && curl -fL https://github.com/phaller/scala-bison/releases/download/v1.2/scala-bison-3.3.jar -o /buildsrc/scala/scala-bison-3.3.jar \
+     && mkdir -p /usr/local/share/scala-bison/lib \
+     && mv scala-bison-3.3.jar /usr/local/share/scala-bison/lib/scala-bison-3.3.jar \
+     && (scala-bison || true) \
+     # Prepare scala-cli
+     && cd /root \
+     && echo "object Temp extends App" > /root/Temp.scala \
+     && cs launch scala-cli -- --power package Temp.scala -o temp \
+     && rm /root/temp /root/Temp.scala \
+  ; else \
+        echo -e "\e[1;33m<<<<==== Skipping Scala ====>>>>\e[0m" \
+  ; fi \
  # Rust
- && mkdir -p /buildsrc/rust \
- && cd /buildsrc/rust \
- && apt-get install -y --no-install-recommends ca-certificates gcc libc6-dev \
- && wget "https://static.rust-lang.org/rustup/dist/${ARCHITECTURE}-unknown-linux-gnu/rustup-init" \
- && chmod +x rustup-init \
- && ./rustup-init -y --no-modify-path --default-toolchain nightly \
- && rm rustup-init \
- && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
- && rustup --version \
- && cargo --version \
- && rustc --version \
- # Prepare scala-cli
- && cd /root \
- && echo "object Temp extends App" > /root/Temp.scala \
- && cs launch scala-cli -- --power package Temp.scala -o temp \
- && rm /root/temp /root/Temp.scala \
- # Setup stack (Haskell)
- && apt-get install -y libnuma-dev llvm-dev \
- && stack setup --resolver lts-18.14 \
- && stack install --resolver lts-18.14 unordered-containers pretty-show prettyprinter optparse-applicative uniplate protolude recursion-schemes alex happy \
- # Setup Opam
- && opam init -y --disable-sandboxing \
- && opam install -y ocamlbuild menhir ocamlfind core \
- # Setup Rust Cargo
- && cargo install -j1 cargo-prefetch \
- && cargo prefetch \
+ && if [ "$INSTALL_RUST" = "y" ]; then \
+        echo -e "\e[1;32m<<<<==== Installing Rust ====>>>>\e[0m" \
+     && mkdir -p /buildsrc/rust \
+     && cd /buildsrc/rust \
+     && apt-get install -y --no-install-recommends libc6-dev libssl-dev \
+     && curl -fLO "https://static.rust-lang.org/rustup/dist/${ARCHITECTURE}-unknown-linux-gnu/rustup-init" \
+     && chmod +x rustup-init \
+     && ./rustup-init -y --no-modify-path --default-toolchain nightly \
+     && rm rustup-init \
+     && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
+     && rustup --version \
+     && cargo --version \
+     && rustc --version \
+     # Setup Rust Cargo
+     && cargo install -j1 cargo-prefetch \
+     && cargo prefetch \
+  ; else \
+        echo -e "\e[1;33m<<<<==== Skipping Rust ====>>>>\e[0m" \
+  ; fi \
  # Cleanup
  && cd /root \
  && rm -rf /buildsrc \
@@ -107,10 +160,10 @@ RUN DEBIAN_FRONTEND=noninteractive echo "Installing dependencies" \
  # Finalize
  && echo "Done."
 
-ENV OPAM_SWITCH_PREFIX='/root/.opam/default' \
-    CAML_LD_LIBRARY_PATH='/root/.opam/default/lib/stublibs:/root/.opam/default/lib/ocaml/stublibs:/root/.opam/default/lib/ocaml' \
-    OCAML_TOPLEVEL_PATH='/root/.opam/default/lib/toplevel' \
-    MANPATH=':/root/.opam/system/man:/root/.opam/default/man' \
-    PATH='/root/.opam/default/bin:/root/.opam/system/bin:/usr/local/cargo/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH'
+ENV OPAM_SWITCH_PREFIX='/root/.opam/5.3.0' \
+    CAML_LD_LIBRARY_PATH='/root/.opam/5.3.0/lib/stublibs:/root/.opam/5.3.0/lib/ocaml/stublibs:/root/.opam/5.3.0/lib/ocaml' \
+    OCAML_TOPLEVEL_PATH='/root/.opam/5.3.0/lib/toplevel' \
+    MANPATH=':/root/.opam/system/man:/root/.opam/5.3.0/man' \
+    PATH='/root/.opam/5.3.0/bin:/root/.opam/system/bin:/usr/local/cargo/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH'
 
 WORKDIR /id2202
