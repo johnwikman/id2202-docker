@@ -50,6 +50,7 @@ ARG INSTALL_HASKELL
 ARG INSTALL_JAVA
 ARG INSTALL_SCALA
 ARG INSTALL_RUST
+ARG INSTALL_PYKING
 RUN export DEBIAN_FRONTEND=noninteractive \
  && if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
         export ARCHITECTURE=x86_64; \
@@ -155,6 +156,16 @@ RUN export DEBIAN_FRONTEND=noninteractive \
      && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
   ; else \
         echo -e "\e[1;33m<<<<==== Skipping Rust ====>>>>\e[0m" \
+  ; fi \
+ # Pyking
+ && if [ "$INSTALL_PYKING" = "y" ]; then \
+        echo -e "\e[1;32m<<<<==== Installing Pyking ====>>>>\e[0m" \
+     && mkdir -p /buildsrc/pyking \
+     && cd /buildsrc/pyking \
+     && curl -fsSL https://github.com/pyking-lang/pyking-releases/releases/download/v0.1.2/install.sh -o /buildsrc/pyking/pyking-install.sh \
+     && sh pyking-install.sh \
+  ; else \
+        echo -e "\e[1;33m<<<<==== Skipping Pyking ====>>>>\e[0m" \
   ; fi \
  # Cleanup
  && cd /root \

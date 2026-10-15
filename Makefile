@@ -26,7 +26,7 @@ TAG_MINIMAL = $(IMAGENAME):$(VERSION)-minimal
 TAG_X86 = $(IMAGENAME):$(VERSION)-x86
 TAG_ARM = $(IMAGENAME):$(VERSION)-arm
 
-LANGUAGES = ocaml scala rust java haskell
+LANGUAGES = ocaml scala rust java haskell pyking
 LANGUAGES_UC = $(foreach l,$(LANGUAGES),$(shell echo $(l) | tr '[:lower:]' '[:upper:]'))
 
 CONTAINER_RUNTIME ?= podman
