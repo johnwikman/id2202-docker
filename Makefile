@@ -36,7 +36,7 @@ CMD_PUSH_f          = podman push $1 docker://docker.io/$1
 CMD_MANIFEST        = podman manifest
 CMD_MANIFEST_PUSH_f = podman manifest push --rm $1 docker://docker.io/$1
 else ifeq ($(CONTAINER_RUNTIME),docker)
-CMD_BUILD           = docker build --force-rm --file=Dockerfile
+CMD_BUILD           = docker build --provenance=false --force-rm --file=Dockerfile
 CMD_PUSH_f          = docker push $1
 CMD_MANIFEST        = docker manifest
 CMD_MANIFEST_PUSH_f = docker manifest push --purge $1
@@ -117,6 +117,8 @@ build-complete-arm:
 	        "BUILD_TAG=$(TAG_ARM)" \
 	        "BUILD_LANGS=$(LANGUAGES_UC)"
 
+SPECIALIZED_LANGUAGES = ocaml scala rust java haskell
+
 build-ocaml-x86:   _build-lang-x86-ocaml
 build-scala-x86:   _build-lang-x86-scala
 build-rust-x86:    _build-lang-x86-rust
@@ -168,7 +170,7 @@ push-manifest:
 	$(CMD_MANIFEST) rm $(IMAGENAME):$(VERSION)         || true
 	$(CMD_MANIFEST) rm $(IMAGENAME):latest             || true
 	$(CMD_MANIFEST) rm $(IMAGENAME):minimal            || true
-	for l in $(LANGUAGES); do \
+	for l in $(SPECIALIZED_LANGUAGES); do \
 		$(CMD_MANIFEST) rm $(IMAGENAME):$(VERSION)-$$l || true; \
 		$(CMD_MANIFEST) rm $(IMAGENAME):latest-$$l || true; \
 	done
@@ -176,7 +178,7 @@ push-manifest:
 	$(CMD_MANIFEST) create $(IMAGENAME):$(VERSION)         --amend "$(TAG_X86)" --amend "$(TAG_ARM)"
 	$(CMD_MANIFEST) create $(IMAGENAME):latest             --amend "$(TAG_X86)" --amend "$(TAG_ARM)"
 	$(CMD_MANIFEST) create $(IMAGENAME):minimal            --amend "$(TAG_MINIMAL)"
-	for l in $(LANGUAGES); do \
+	for l in $(SPECIALIZED_LANGUAGES); do \
 		$(CMD_MANIFEST) create $(IMAGENAME):$(VERSION)-$$l --amend "$(TAG_X86)-$$l" --amend "$(TAG_ARM)-$$l"; \
 		$(CMD_MANIFEST) create $(IMAGENAME):latest-$$l     --amend "$(TAG_X86)-$$l" --amend "$(TAG_ARM)-$$l"; \
 	done
@@ -184,7 +186,7 @@ push-manifest:
 	$(call CMD_MANIFEST_PUSH_f,$(IMAGENAME):$(VERSION))
 	$(call CMD_MANIFEST_PUSH_f,$(IMAGENAME):latest)
 	$(call CMD_MANIFEST_PUSH_f,$(IMAGENAME):minimal)
-	for l in $(LANGUAGES); do \
+	for l in $(SPECIALIZED_LANGUAGES); do \
 		$(call CMD_MANIFEST_PUSH_f,$(IMAGENAME):$(VERSION)-$$l); \
 		$(call CMD_MANIFEST_PUSH_f,$(IMAGENAME):latest-$$l); \
 	done
