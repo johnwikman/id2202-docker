@@ -1,8 +1,24 @@
-.PHONY: build-minimal
+.PHONY: build-minimal \
+        build-complete-x86 build-complete-arm \
+        build-ocaml-x86    build-ocaml-arm \
+        build-scala-x86    build-scala-arm \
+        build-rust-x86     build-rust-arm \
+        build-java-x86     build-java-arm \
+        build-haskell-x86  build-haskell-arm \
+        push-manifest \
+        push-minimal \
+        push-x86         push-arm \
+        push-ocaml-x86   push-ocaml-arm \
+        push-scala-x86   push-scala-arm \
+        push-rust-x86    push-rust-arm \
+        push-java-x86    push-java-arm \
+        push-haskell-x86 push-haskell-arm \
+        show-variables
 
 SHELL = bash
+.SHELLFLAGS = -ec
 
-VERSION = 0.3.0
+VERSION = 1.0.0
 
 IMAGENAME = johnwikman/id2202
 
@@ -80,26 +96,26 @@ _build-generic:
 _build-lang-x86-%:
 	$(eval LANG_LC := $*)
 	$(eval LANG_UC := $(shell echo "$*" | tr '[:lower:]' '[:upper:]'))
-	make _build-generic "BUILD_PLATFORM=linux/amd64" \
-	    "BUILD_TAG=$(TAG_X86)-$(LANG_LC)" \
-	    "BUILD_LANGS=$(LANG_UC)"
+	$(MAKE) _build-generic "BUILD_PLATFORM=linux/amd64" \
+	        "BUILD_TAG=$(TAG_X86)-$(LANG_LC)" \
+	        "BUILD_LANGS=$(LANG_UC)"
 
 _build-lang-arm-%:
 	$(eval LANG_LC := $*)
 	$(eval LANG_UC := $(shell echo "$*" | tr '[:lower:]' '[:upper:]'))
-	make _build-generic "BUILD_PLATFORM=linux/arm64" \
-	    "BUILD_TAG=$(TAG_ARM)-$(LANG_LC)" \
-	    "BUILD_LANGS=$(LANG_UC)"
+	$(MAKE) _build-generic "BUILD_PLATFORM=linux/arm64" \
+	        "BUILD_TAG=$(TAG_ARM)-$(LANG_LC)" \
+	        "BUILD_LANGS=$(LANG_UC)"
 
 build-complete-x86:
-	make _build-generic "BUILD_PLATFORM=linux/amd64" \
-	    "BUILD_TAG=$(TAG_X86)" \
-	    "BUILD_LANGS=$(LANGUAGES_UC)"
+	$(MAKE) _build-generic "BUILD_PLATFORM=linux/amd64" \
+	        "BUILD_TAG=$(TAG_X86)" \
+	        "BUILD_LANGS=$(LANGUAGES_UC)"
 
 build-complete-arm:
-	make _build-generic "BUILD_PLATFORM=linux/arm64" \
-	    "BUILD_TAG=$(TAG_ARM)" \
-	    "BUILD_LANGS=$(LANGUAGES_UC)"
+	$(MAKE) _build-generic "BUILD_PLATFORM=linux/arm64" \
+	        "BUILD_TAG=$(TAG_ARM)" \
+	        "BUILD_LANGS=$(LANGUAGES_UC)"
 
 build-ocaml-x86:   _build-lang-x86-ocaml
 build-scala-x86:   _build-lang-x86-scala
@@ -131,21 +147,21 @@ _push-tag:
 	@if [ "$(PUSH_TAG)" == "" ]; then echo -e "\e[1;31mPUSH_TAG argument not specified\e[0m"; exit 1; fi
 	$(call CMD_PUSH_f,$(PUSH_TAG))
 
-push-minimal:; make _push-tag "PUSH_TAG=$(TAG_MINIMAL)"
-push-x86:;     make _push-tag "PUSH_TAG=$(TAG_X86)"
-push-arm:;     make _push-tag "PUSH_TAG=$(TAG_ARM)"
+push-minimal:; $(MAKE) _push-tag "PUSH_TAG=$(TAG_MINIMAL)"
+push-x86:;     $(MAKE) _push-tag "PUSH_TAG=$(TAG_X86)"
+push-arm:;     $(MAKE) _push-tag "PUSH_TAG=$(TAG_ARM)"
 
-push-ocaml-x86:;   make _push-tag "PUSH_TAG=$(TAG_X86)-ocaml"
-push-scala-x86:;   make _push-tag "PUSH_TAG=$(TAG_X86)-scala"
-push-rust-x86:;    make _push-tag "PUSH_TAG=$(TAG_X86)-rust"
-push-java-x86:;    make _push-tag "PUSH_TAG=$(TAG_X86)-java"
-push-haskell-x86:; make _push-tag "PUSH_TAG=$(TAG_X86)-haskell"
+push-ocaml-x86:;   $(MAKE) _push-tag "PUSH_TAG=$(TAG_X86)-ocaml"
+push-scala-x86:;   $(MAKE) _push-tag "PUSH_TAG=$(TAG_X86)-scala"
+push-rust-x86:;    $(MAKE) _push-tag "PUSH_TAG=$(TAG_X86)-rust"
+push-java-x86:;    $(MAKE) _push-tag "PUSH_TAG=$(TAG_X86)-java"
+push-haskell-x86:; $(MAKE) _push-tag "PUSH_TAG=$(TAG_X86)-haskell"
 
-push-ocaml-arm:;   make _push-tag "PUSH_TAG=$(TAG_ARM)-ocaml"
-push-scala-arm:;   make _push-tag "PUSH_TAG=$(TAG_ARM)-scala"
-push-rust-arm:;    make _push-tag "PUSH_TAG=$(TAG_ARM)-rust"
-push-java-arm:;    make _push-tag "PUSH_TAG=$(TAG_ARM)-java"
-push-haskell-arm:; make _push-tag "PUSH_TAG=$(TAG_ARM)-haskell"
+push-ocaml-arm:;   $(MAKE) _push-tag "PUSH_TAG=$(TAG_ARM)-ocaml"
+push-scala-arm:;   $(MAKE) _push-tag "PUSH_TAG=$(TAG_ARM)-scala"
+push-rust-arm:;    $(MAKE) _push-tag "PUSH_TAG=$(TAG_ARM)-rust"
+push-java-arm:;    $(MAKE) _push-tag "PUSH_TAG=$(TAG_ARM)-java"
+push-haskell-arm:; $(MAKE) _push-tag "PUSH_TAG=$(TAG_ARM)-haskell"
 
 push-manifest:
 	@# Using the || true since there is no -f option to `manifest rm`
@@ -161,7 +177,7 @@ push-manifest:
 	$(CMD_MANIFEST) create $(IMAGENAME):latest             --amend "$(TAG_X86)" --amend "$(TAG_ARM)"
 	$(CMD_MANIFEST) create $(IMAGENAME):minimal            --amend "$(TAG_MINIMAL)"
 	for l in $(LANGUAGES); do \
-		$(CMD_MANIFEST) create $(IMAGENAME):$(VERSION)-$$l --amend "$(TAG_X86)-$$l" --amend "$(TAG_ARM)-$$l" && \
+		$(CMD_MANIFEST) create $(IMAGENAME):$(VERSION)-$$l --amend "$(TAG_X86)-$$l" --amend "$(TAG_ARM)-$$l"; \
 		$(CMD_MANIFEST) create $(IMAGENAME):latest-$$l     --amend "$(TAG_X86)-$$l" --amend "$(TAG_ARM)-$$l"; \
 	done
 

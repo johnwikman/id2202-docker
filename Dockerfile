@@ -6,17 +6,18 @@
 #▐ |_|  |_|_|_| |_|_|_| |_| |_|\__,_|_| ▌
 #▐                                      ▌
 #▐▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▌
-FROM docker.io/library/debian:13.1 AS minimal
+FROM docker.io/library/debian:13.7 AS minimal
 
 SHELL ["/bin/bash", "-x", "-c"]
 
 WORKDIR /root
 
 # Install dependencies to compile and run x86 with nasm and gcc
-RUN DEBIAN_FRONTEND=noninteractive echo "Installing minimal dependencies" \
+RUN export DEBIAN_FRONTEND=noninteractive \
+ && echo "Installing minimal dependencies" \
  && apt-get update \
  && apt-get install -y \
-        nasm gcc g++ bison make \
+        nasm gcc g++ bison yacc make \
         curl build-essential pkg-config unzip \
  && apt-get clean autoclean \
  && apt-get autoremove --yes \
@@ -68,8 +69,8 @@ RUN export DEBIAN_FRONTEND=noninteractive \
  && if [ "$INSTALL_OCAML" = "y" ]; then \
         echo -e "\e[1;32m<<<<==== Installing OCaml + Opam ====>>>>\e[0m" \
      && bash -c "curl -fsSL https://opam.ocaml.org/install.sh | bash" \
-     && opam init -y --disable-sandboxing --compiler=5.3.0 \
-     && opam install -y ocamlbuild menhir ocamlfind core \
+     && opam init -y --disable-sandboxing --compiler=5.5.0 \
+     && opam install -y ocamlbuild menhir ocamlfind core utop \
   ; else \
         echo -e "\e[1;33m<<<<==== Skipping OCaml + Opam ====>>>>\e[0m" \
   ; fi \
@@ -78,10 +79,10 @@ RUN export DEBIAN_FRONTEND=noninteractive \
         echo -e "\e[1;32m<<<<==== Installing Haskell ====>>>>\e[0m" \
      && mkdir -p /buildsrc/haskell \
      && cd /buildsrc/haskell \
-     && curl -sSL https://get.haskellstack.org/ -o /buildsrc/haskell/stackinstall.sh \
+     && curl -fsSL https://get.haskellstack.org/ -o /buildsrc/haskell/stackinstall.sh \
      && sh /buildsrc/haskell/stackinstall.sh \
      # Setup stack packages
-     && apt-get install -y libnuma-dev llvm-dev \
+     && apt-get install -y libnuma-dev \
      && stack setup --resolver lts-24.6 \
      && stack install --resolver lts-24.6 \
             alex-3.5.4.0 \
@@ -93,13 +94,15 @@ RUN export DEBIAN_FRONTEND=noninteractive \
             recursion-schemes-5.2.3 \
             uniplate-1.6.13 \
             unordered-containers-0.2.20 \
+     # Remove documentation
+     && rm -rf /root/.stack/programs/*/ghc-*/share/doc \
   ; else \
         echo -e "\e[1;33m<<<<==== Skipping Haskell ====>>>>\e[0m" \
   ; fi \
  # Java
  && if [ "$INSTALL_JAVA" = "y" ]; then \
         echo -e "\e[1;32m<<<<==== Installing Java ====>>>>\e[0m" \
-     && apt-get install -y openjdk-21-jdk maven \
+     && apt-get install -y openjdk-21-jdk-headless maven \
   ; else \
         echo -e "\e[1;33m<<<<==== Skipping Java ====>>>>\e[0m" \
   ; fi \
@@ -108,11 +111,11 @@ RUN export DEBIAN_FRONTEND=noninteractive \
         echo -e "\e[1;32m<<<<==== Installing Scala ====>>>>\e[0m" \
      && mkdir -p /buildsrc/scala \
      && cd /buildsrc/scala \
-     && apt-get install -y openjdk-21-jdk \
+     && apt-get install -y openjdk-21-jdk-headless \
      && curl -fL https://github.com/coursier/launchers/raw/master/cs-${ARCHITECTURE}-pc-linux.gz | gzip -d > /buildsrc/scala/cs \
      && chmod +x /buildsrc/scala/cs \
      && mv cs /usr/local/bin/cs \
-     && cs setup --yes --apps scala,scalac,scala-cli \
+     && cs setup --yes --apps scala:3.10.0,scalac:3.10.0,scala-cli \
      && echo '@main def main = println(s"Scala library version ${dotty.tools.dotc.config.Properties.versionNumberString}")' > /buildsrc/scala/test.scala \
      && cs launch scala -- -nocompdaemon test.scala \
      # Scala-Bison
@@ -139,15 +142,17 @@ RUN export DEBIAN_FRONTEND=noninteractive \
      && apt-get install -y --no-install-recommends libc6-dev libssl-dev \
      && curl -fLO "https://static.rust-lang.org/rustup/dist/${ARCHITECTURE}-unknown-linux-gnu/rustup-init" \
      && chmod +x rustup-init \
-     && ./rustup-init -y --no-modify-path --default-toolchain nightly \
+     && ./rustup-init -y --profile minimal -c clippy,rustfmt --no-modify-path --default-toolchain 1.99.0 \
      && rm rustup-init \
-     && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
      && rustup --version \
      && cargo --version \
      && rustc --version \
      # Setup Rust Cargo
      && cargo install -j1 cargo-prefetch \
      && cargo prefetch \
+     # Cleanup
+     && rm -rf $CARGO_HOME/registry/src \
+     && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
   ; else \
         echo -e "\e[1;33m<<<<==== Skipping Rust ====>>>>\e[0m" \
   ; fi \
@@ -160,10 +165,10 @@ RUN export DEBIAN_FRONTEND=noninteractive \
  # Finalize
  && echo "Done."
 
-ENV OPAM_SWITCH_PREFIX='/root/.opam/5.3.0' \
-    CAML_LD_LIBRARY_PATH='/root/.opam/5.3.0/lib/stublibs:/root/.opam/5.3.0/lib/ocaml/stublibs:/root/.opam/5.3.0/lib/ocaml' \
-    OCAML_TOPLEVEL_PATH='/root/.opam/5.3.0/lib/toplevel' \
-    MANPATH=':/root/.opam/system/man:/root/.opam/5.3.0/man' \
-    PATH='/root/.opam/5.3.0/bin:/root/.opam/system/bin:/usr/local/cargo/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH'
+ENV OPAM_SWITCH_PREFIX='/root/.opam/5.5.0' \
+    CAML_LD_LIBRARY_PATH='/root/.opam/5.5.0/lib/stublibs:/root/.opam/5.5.0/lib/ocaml/stublibs:/root/.opam/5.5.0/lib/ocaml' \
+    OCAML_TOPLEVEL_PATH='/root/.opam/5.5.0/lib/toplevel' \
+    MANPATH=':/root/.opam/system/man:/root/.opam/5.5.0/man' \
+    PATH='/root/.opam/5.5.0/bin:/root/.opam/system/bin:/usr/local/cargo/bin:/root/.local/share/coursier/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH'
 
 WORKDIR /id2202
