@@ -19,6 +19,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
  && apt-get install -y \
         nasm gcc g++ bison yacc make \
         curl build-essential pkg-config unzip \
+        python3 nano neovim \
  && apt-get clean autoclean \
  && apt-get autoremove --yes \
  && rm -rf /var/lib/apt/lists/*
@@ -162,7 +163,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
         echo -e "\e[1;32m<<<<==== Installing Pyking ====>>>>\e[0m" \
      && mkdir -p /buildsrc/pyking \
      && cd /buildsrc/pyking \
-     && curl -fsSL https://github.com/pyking-lang/pyking-releases/releases/download/v0.1.2/install.sh -o /buildsrc/pyking/pyking-install.sh \
+     && curl -fsSL https://github.com/pyking-lang/pyking-releases/releases/download/v0.1.4/install.sh -o /buildsrc/pyking/pyking-install.sh \
      && sh pyking-install.sh \
   ; else \
         echo -e "\e[1;33m<<<<==== Skipping Pyking ====>>>>\e[0m" \
