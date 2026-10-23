@@ -17,7 +17,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
  && echo "Installing minimal dependencies" \
  && apt-get update \
  && apt-get install -y \
-        nasm gcc g++ bison yacc make \
+        nasm gcc g++ bison yacc flex make \
         curl build-essential pkg-config unzip \
         python3 nano neovim \
  && apt-get clean autoclean \
